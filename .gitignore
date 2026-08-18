@@ -1,0 +1,16 @@
+# Unreal Engine Ignored Folders
+Binaries/
+Intermediate/
+Saved/
+DerivedDataCache/
+Build/
+.vs/
+
+# Unreal Engine Ignored Files
+*.csproj
+*.sln
+*.suo
+*.user
+*.VC.db
+*.opensdf
+*.sdf
