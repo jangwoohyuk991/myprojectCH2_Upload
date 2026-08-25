@@ -1,9 +1,9 @@
 #include "HealingItem.h"
-#include "Engine/Engine.h"
+#include "SpartaCharacter.h"
 
 AHealingItem::AHealingItem()
 {
-	HealAmount = 20; 
+	HealAmount = 20.0f;
 	ItemType = "Healing";
 }
 
@@ -11,12 +11,11 @@ void AHealingItem::ActivateItem(AActor* Activator)
 {
 	if (Activator && Activator->ActorHasTag("Player"))
 	{
-		
-		GEngine->AddOnScreenDebugMessage(
-			-1, 
-			2.0f,
-			FColor::Green,
-			FString::Printf(TEXT("Player gained %d HP!"), HealAmount));
+		if (ASpartaCharacter* PlayerCharacter = Cast<ASpartaCharacter>(Activator))
+		{
+			// 캐릭터 체력 회복
+			PlayerCharacter->AddHealth(HealAmount);
+		}
 
 		DestroyItem();
 	}

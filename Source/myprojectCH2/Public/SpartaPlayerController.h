@@ -6,30 +6,66 @@
 
 class UInputMappingContext;
 class UInputAction;
+class UUserWidget;
 
 UCLASS()
 class MYPROJECTCH2_API ASpartaPlayerController : public APlayerController
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 public:
-    ASpartaPlayerController();
-    // EditAnywhere, BlueprintReadWrite을 쓰면 디테일 패널에서 기본값을 자유롭게 수정하고
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
-    UInputMappingContext* InputMappingContext;
-    //동시에 블루프린트 그래프 안에서 노드로 가져다쓰거나 바꿀수도 있다.
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
-    UInputAction* MoveAction;
+	ASpartaPlayerController();
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
-    UInputAction* JumpAction;
+	// Enhanced Input
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	UInputMappingContext* InputMappingContext;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
-    UInputAction* LookAction;
+	// 이미지에서 누락되었던 InputAction 변수들
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	UInputAction* MoveAction;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
-    UInputAction* SprintAction;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	UInputAction* JumpAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	UInputAction* LookAction;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+	UInputAction* SprintAction;
+
+	// HUD UI
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "HUD")
+	TSubclassOf<UUserWidget> HUDWidgetClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "HUD")
+	UUserWidget* HUDWidgetInstance;
+
+	// 메인 메뉴 UI
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Menu")
+	TSubclassOf<UUserWidget> MainMenuWidgetClass;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Menu")
+	UUserWidget* MainMenuWidgetInstance;
+
+	UFUNCTION(BlueprintPure, Category = "HUD")
+	UUserWidget* GetHUDWidget() const;
+
+	// HUD 표시
+	UFUNCTION(BlueprintCallable, Category = "HUD")
+	void ShowGameHUD();
+
+	// 메인 메뉴 및 게임 오버 메뉴 표시 (bIsRestart 플래그에 따라 버튼 텍스트 변경)
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	void ShowMainMenu(bool bIsRestart);
+
+	// 게임 시작 / 재시작 함수
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	void StartGame();
+
+	// 게임 종료 함수
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	void ExitGame();
 
 protected:
-    virtual void BeginPlay() override;
+	virtual void BeginPlay() override;
 };

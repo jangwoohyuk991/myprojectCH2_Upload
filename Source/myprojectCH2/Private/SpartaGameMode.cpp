@@ -1,12 +1,13 @@
 #include "SpartaGameMode.h"
-#include "SpartaCharacter.h" // 캐릭터 클래스 지정
-#include "SpartaPlayerController.h" // 플레이어 컨트롤러 클래스 지정
+#include "SpartaPlayerController.h"
+#include "SpartaCharacter.h"
+#include "SpartaGameState.h"
 
 ASpartaGameMode::ASpartaGameMode()
 {
-    
-    DefaultPawnClass = ASpartaCharacter::StaticClass();
+	PlayerControllerClass = ASpartaPlayerController::StaticClass();
+	DefaultPawnClass = ASpartaCharacter::StaticClass();
 
-    
-    PlayerControllerClass = ASpartaPlayerController::StaticClass();
+	// 커스텀 GameState 클래스 할당
+	GameStateClass = ASpartaGameState::StaticClass();
 }

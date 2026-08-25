@@ -1,4 +1,6 @@
 #include "CoinItem.h"
+#include "Engine/World.h"
+#include "SpartaGameState.h"
 
 ACoinItem::ACoinItem()
 {
@@ -10,13 +12,16 @@ void ACoinItem::ActivateItem(AActor* Activator)
 {
 	if (Activator && Activator->ActorHasTag("Player"))
 	{
-		// 점수 획득 화면 출력
-		GEngine->AddOnScreenDebugMessage(
-			-1,
-			2.0f, 
-			FColor::Green,
-			FString::Printf(TEXT("Player gained %d points!"), PointValue));
+		if (UWorld* World = GetWorld())
+		{
+			// 전역 GameState를 가져와 점수 추가
+			if (ASpartaGameState* GameState = World->GetGameState<ASpartaGameState>())
+			{
+				GameState->AddScore(PointValue);
+				GameState->OnCoinCollected();
+			}
+		}
 
-		DestroyItem(); // 획득 후 삭제
+		DestroyItem(); // 점수 반영 후 아이템 소멸
 	}
 }

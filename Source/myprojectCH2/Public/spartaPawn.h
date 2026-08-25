@@ -2,27 +2,34 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Pawn.h"
-#include "SpartaPawn.generated.h"
+#include "InputActionValue.h"
+
+#include "spartaPawn.generated.h"
 
 class UCapsuleComponent;
 class USkeletalMeshComponent;
 class USpringArmComponent;
 class UCameraComponent;
-struct FInputActionValue;
+class UInputMappingContext;
+class UInputAction;
 
 UCLASS()
-class MYPROJECTCH2_API ASpartaPawn : public APawn
+class MYPROJECTCH2_API AspartaPawn : public APawn
 {
     GENERATED_BODY()
 
 public:
-    ASpartaPawn();
+    AspartaPawn();
 
 protected:
     virtual void BeginPlay() override;
+
+public:
     virtual void Tick(float DeltaTime) override;
     virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+protected:
+    // 컴포넌트 선언
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     UCapsuleComponent* CapsuleComp;
 
@@ -35,16 +42,29 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     UCameraComponent* CameraComp;
 
-    void Move(const FInputActionValue& Value);
-    void Look(const FInputActionValue& Value);
+    // Enhanced Input 프로퍼티
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+    UInputMappingContext* InputMappingContext;
 
-    FVector2D MoveInput;
-    FVector2D LookInput;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+    UInputAction* MoveAction;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Input")
+    UInputAction* LookAction;
+
+    // 이동 및 회전 속도 설정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
     float MoveSpeed = 600.0f;
 
-    // ★ 애니메이션 블루프린트에 속도 값을 전달하기 위한 변수 추가
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement")
-    float CurrentSpeed = 0.0f;
-};
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
+    float RotationSpeed = 100.0f;
+
+private:
+    // 입력 데이터를 저장할 변수
+    FVector2D CurrentMoveInput;
+    FVector2D CurrentLookInput;
+
+    // 입력 처리 함수
+    void Move(const FInputActionValue& Value);
+    void Look(const FInputActionValue& Value);
+}; 

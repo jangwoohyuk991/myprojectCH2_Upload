@@ -1,115 +1,115 @@
-#include "SpartaPawn.h"
+#include "spartaPawn.h"
+
+// 컴포넌트 및 필수 헤더 포함
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "EnhancedInputComponent.h"
-#include "SpartaPlayerController.h"
-#include "InputActionValue.h"
+#include "EnhancedInputSubsystems.h"
 
-ASpartaPawn::ASpartaPawn()
+AspartaPawn::AspartaPawn()
 {
     PrimaryActorTick.bCanEverTick = true;
 
+    // 1. 루트 캡슐 컴포넌트 생성
     CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>(TEXT("CapsuleComp"));
-    RootComponent = CapsuleComp;
-    CapsuleComp->InitCapsuleSize(34.0f, 88.0f);
+    SetRootComponent(CapsuleComp);
     CapsuleComp->SetSimulatePhysics(false);
 
+    // 2. 스켈레탈 메시 컴포넌트 생성
     MeshComp = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("MeshComp"));
-    MeshComp->SetupAttachment(CapsuleComp);
+    MeshComp->SetupAttachment(RootComponent);
     MeshComp->SetSimulatePhysics(false);
-    MeshComp->SetRelativeLocation(FVector(0.0f, 0.0f, -88.0f));
 
+    // 3. 스프링암 컴포넌트 생성
     SpringArmComp = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArmComp"));
-    SpringArmComp->SetupAttachment(CapsuleComp);
+    SpringArmComp->SetupAttachment(RootComponent);
     SpringArmComp->TargetArmLength = 300.0f;
-    SpringArmComp->bUsePawnControlRotation = true;
 
+    // 4. 카메라 컴포넌트 생성
     CameraComp = CreateDefaultSubobject<UCameraComponent>(TEXT("CameraComp"));
     CameraComp->SetupAttachment(SpringArmComp, USpringArmComponent::SocketName);
-    CameraComp->bUsePawnControlRotation = false;
 }
 
-void ASpartaPawn::BeginPlay()
+void AspartaPawn::BeginPlay()
 {
     Super::BeginPlay();
-}
 
-void ASpartaPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-    Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-    if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+    // Enhanced Input Context 활성화
+    if (APlayerController* PC = Cast<APlayerController>(GetController()))
     {
-        if (ASpartaPlayerController* PC = Cast<ASpartaPlayerController>(GetController()))
+        if (ULocalPlayer* LocalPlayer = PC->GetLocalPlayer())
         {
-            if (PC->MoveAction)
+            if (UEnhancedInputLocalPlayerSubsystem* Subsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
             {
-                EnhancedInput->BindAction(PC->MoveAction, ETriggerEvent::Triggered, this, &ASpartaPawn::Move);
-                EnhancedInput->BindAction(PC->MoveAction, ETriggerEvent::Completed, this, &ASpartaPawn::Move);
-            }
-            if (PC->LookAction)
-            {
-                EnhancedInput->BindAction(PC->LookAction, ETriggerEvent::Triggered, this, &ASpartaPawn::Look);
+                if (InputMappingContext)
+                {
+                    Subsystem->AddMappingContext(InputMappingContext, 0);
+                }
             }
         }
     }
 }
 
-void ASpartaPawn::Move(const FInputActionValue& Value)
-{
-    MoveInput = Value.Get<FVector2D>();
-}
-
-void ASpartaPawn::Look(const FInputActionValue& Value)
-{
-    LookInput = Value.Get<FVector2D>();
-}
-
-void ASpartaPawn::Tick(float DeltaTime)
+void AspartaPawn::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
-    // 1. 마우스 회전 입력 처리 (컨트롤러 회전 변경)
-    if (!LookInput.IsZero())
+    // 1. 이동 처리 (DeltaTime 적용, AddActorLocalOffset 사용)
+    if (!CurrentMoveInput.IsNearlyZero())
     {
-        AddControllerYawInput(LookInput.X);
-        AddControllerPitchInput(LookInput.Y);
-        LookInput = FVector2D::ZeroVector; // 입력 초기화
+        FVector MoveDelta = FVector(CurrentMoveInput.X, CurrentMoveInput.Y, 0.0f) * MoveSpeed * DeltaTime;
+        AddActorLocalOffset(MoveDelta, true);
     }
 
-    // 2. 이동 처리 (벽 충돌 방지 Sweep 적용)
-    if (!MoveInput.IsZero())
+    // 2. 회전 처리 (DeltaTime 적용, AddActorLocalRotation 및 SpringArm 사용)
+    if (!CurrentLookInput.IsNearlyZero())
     {
-        const FRotator ControlRot = Controller ? Controller->GetControlRotation() : FRotator::ZeroRotator;
-        const FRotator YawRot(0.0f, ControlRot.Yaw, 0.0f);
+        float YawDelta = CurrentLookInput.X * RotationSpeed * DeltaTime;
+        float PitchDelta = CurrentLookInput.Y * RotationSpeed * DeltaTime;
 
-        const FVector ForwardDir = FRotationMatrix(YawRot).GetUnitAxis(EAxis::X);
-        const FVector RightDir = FRotationMatrix(YawRot).GetUnitAxis(EAxis::Y);
+        // Yaw 회전 (Pawn 본체 회전)
+        FRotator NewRotation = FRotator(0.0f, YawDelta, 0.0f);
+        AddActorLocalRotation(NewRotation);
 
-        FVector MoveDirection = (ForwardDir * MoveInput.X + RightDir * MoveInput.Y);
-        MoveDirection.Z = 0.0f;
-        MoveDirection.Normalize();
-
-        // 이동할 실제 거리 계산
-        FVector DeltaLocation = MoveDirection * MoveSpeed * DeltaTime;
-        AddActorWorldOffset(DeltaLocation, true); // true = 벽에 부딪힘 (막힘)
-
-        // 캐릭터 몸통을 이동 방향으로 자연스럽게 회전
-        if (!MoveDirection.IsZero())
+        // Pitch 회전 (카메라 스프링암 회전)
+        if (SpringArmComp)
         {
-            FRotator TargetRotation = MoveDirection.Rotation();
-            FRotator NewRotation = FMath::RInterpTo(GetActorRotation(), TargetRotation, DeltaTime, 10.0f);
-            SetActorRotation(NewRotation);
+            FRotator ArmRotation = SpringArmComp->GetRelativeRotation();
+            ArmRotation.Pitch = FMath::Clamp(ArmRotation.Pitch + PitchDelta, -80.0f, 80.0f);
+            SpringArmComp->SetRelativeRotation(ArmRotation);
+        }
+    }
+}
+
+void AspartaPawn::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
+{
+    Super::SetupPlayerInputComponent(PlayerInputComponent);
+
+    // Enhanced Input 바인딩 (Triggered: 누르고 있을 때, Completed: 손을 뗐을 때)
+    if (UEnhancedInputComponent* EnhancedInput = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+    {
+        if (MoveAction)
+        {
+            EnhancedInput->BindAction(MoveAction, ETriggerEvent::Triggered, this, &AspartaPawn::Move);
+            EnhancedInput->BindAction(MoveAction, ETriggerEvent::Completed, this, &AspartaPawn::Move);
         }
 
-        // 움직이고 있으므로 현재 속도를 MoveSpeed로 설정
-        CurrentSpeed = MoveSpeed;
+        if (LookAction)
+        {
+            EnhancedInput->BindAction(LookAction, ETriggerEvent::Triggered, this, &AspartaPawn::Look);
+            EnhancedInput->BindAction(LookAction, ETriggerEvent::Completed, this, &AspartaPawn::Look);
+        }
     }
-    else
-    {
-        // 키를 떼었을 때 속도를 0으로 만들어 멈춤 상태로 전환
-        CurrentSpeed = 0.0f;
-    }
+}
+
+void AspartaPawn::Move(const FInputActionValue& Value)
+{
+    CurrentMoveInput = Value.Get<FVector2D>();
+}
+
+void AspartaPawn::Look(const FInputActionValue& Value)
+{
+    CurrentLookInput = Value.Get<FVector2D>();
 }
