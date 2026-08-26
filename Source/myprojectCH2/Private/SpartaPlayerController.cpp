@@ -151,6 +151,8 @@ void ASpartaPlayerController::ShowGameHUD()
 // 게임 시작
 void ASpartaPlayerController::StartGame()
 {
+	SetPause(false);
+
 	if (USpartaGameInstance* SpartaGameInstance = Cast<USpartaGameInstance>(UGameplayStatics::GetGameInstance(this)))
 	{
 		SpartaGameInstance->CurrentLevelIndex = 0;
@@ -166,4 +168,12 @@ void ASpartaPlayerController::StartGame()
 void ASpartaPlayerController::ExitGame()
 {
 	UKismetSystemLibrary::QuitGame(GetWorld(), this, EQuitPreference::Quit, false);
+}
+
+// === [추가] 메인 메뉴 이동 구현 ===
+void ASpartaPlayerController::GoToMainMenu()
+{
+	SetPause(false);
+
+	UGameplayStatics::OpenLevel(GetWorld(), FName("MenuLevel"));
 }

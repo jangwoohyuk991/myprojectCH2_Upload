@@ -1,5 +1,7 @@
 #include "BaseItem.h"
 #include "Components/SphereComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Particles/ParticleSystemComponent.h"
 
 ABaseItem::ABaseItem()
 {
@@ -53,10 +55,49 @@ void ABaseItem::OnItemEndOverlap(
 
 void ABaseItem::ActivateItem(AActor* Activator)
 {
-	GEngine->AddOnScreenDebugMessage(
-		-1,
-		2.0f,
-		FColor::Green, TEXT("Overlap!!"));
+	UParticleSystemComponent* Particle = nullptr;
+
+	if (PickupParticle)
+	{
+		Particle = UGameplayStatics::SpawnEmitterAtLocation(
+			GetWorld(),
+			PickupParticle,
+			GetActorLocation(),
+			GetActorRotation(),
+			true
+		);
+	}
+
+	if (PickupSound)
+	{
+		UGameplayStatics::PlaySoundAtLocation(
+			GetWorld(),
+			PickupSound,
+			GetActorLocation()
+		);
+	}
+
+	if (Particle)
+	{
+		FTimerHandle DestroyParticleTimerHandle;
+
+		// 1. Particle 컴포넌트를 Safe 한 약한 참조 포인터로 변환
+		TWeakObjectPtr<UParticleSystemComponent> WeakParticle = Particle;
+
+		GetWorld()->GetTimerManager().SetTimer(
+			DestroyParticleTimerHandle,
+			[WeakParticle]()
+			{
+				// 2. 2초 뒤 타이머가 실행될 때 객체가 아직 메모리에 살아있는지 검사
+				if (WeakParticle.IsValid())
+				{
+					WeakParticle->DestroyComponent();
+				}
+			},
+			2.0f,
+			false
+		);
+	}
 }
 
 FName ABaseItem::GetItemType() const

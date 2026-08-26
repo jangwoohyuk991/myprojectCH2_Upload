@@ -7,50 +7,60 @@
 UCLASS()
 class MYPROJECTCH2_API ASpartaGameState : public AGameState
 {
-    GENERATED_BODY()
+	GENERATED_BODY()
 
 public:
-    ASpartaGameState();
-    virtual void BeginPlay() override;
+	ASpartaGameState();
+	virtual void BeginPlay() override;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Score")
-    int32 Score;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Score")
+	int32 Score;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Coin")
-    int32 SpawnedCoinCount;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Coin")
+	int32 SpawnedCoinCount;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Coin")
-    int32 CollectedCoinCount;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Coin")
+	int32 CollectedCoinCount;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Level")
-    float LevelDuration;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Level")
+	float LevelDuration;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Level")
-    int32 CurrentLevelIndex;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Level")
+	int32 CurrentLevelIndex;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Level")
-    int32 MaxLevels;
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Level")
+	int32 MaxLevels;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Level")
-    TArray<FName> LevelMapNames;
+	// === [추가 1] 웨이브 관련 변수 선언 ===
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Wave")
+	int32 CurrentWave;
 
-    FTimerHandle LevelTimerHandle;
-    FTimerHandle HUDUpdateTimerHandle; // HUD 갱신용 타이머 핸들
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Wave")
+	int32 MaxWaves;
 
-    UFUNCTION(BlueprintPure, Category = "Score")
-    int32 GetScore() const;
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Level")
+	TArray<FName> LevelMapNames;
 
-    UFUNCTION(BlueprintCallable, Category = "Score")
-    void AddScore(int32 Amount);
+	FTimerHandle LevelTimerHandle;
+	FTimerHandle HUDUpdateTimerHandle;
 
-    UFUNCTION(BlueprintCallable, Category = "Level")
-    void OnGameOver();
+	UFUNCTION(BlueprintPure, Category = "Score")
+	int32 GetScore() const;
 
-    void StartLevel();
-    void OnLevelTimeUp();
-    void OnCoinCollected();
-    void EndLevel();
+	UFUNCTION(BlueprintCallable, Category = "Score")
+	void AddScore(int32 Amount);
 
-    // HUD의 Text Block들을 찾아 업데이트하는 핵심 함수
-    void UpdateHUD();
+	UFUNCTION(BlueprintCallable, Category = "Level")
+	void OnGameOver();
+
+	void StartLevel();
+
+	// === [추가 2] 웨이브 흐름 함수 ===
+	void StartWave();
+	void EndWave();
+	void OnLevelTimeUp(); // 웨이브 시간 만료 시 호출
+	void OnCoinCollected();
+
+	void EndLevel();
+	void UpdateHUD();
 };

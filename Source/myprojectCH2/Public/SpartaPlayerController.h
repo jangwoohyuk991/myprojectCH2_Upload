@@ -65,6 +65,9 @@ public:
 	// 게임 종료 함수
 	UFUNCTION(BlueprintCallable, Category = "Menu")
 	void ExitGame();
+	// === [추가] 메인 메뉴 맵(MenuLevel)으로 이동하는 함수 ===
+	UFUNCTION(BlueprintCallable, Category = "Menu")
+	void GoToMainMenu();
 
 protected:
 	virtual void BeginPlay() override;

@@ -28,6 +28,12 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Item|Component")
 	UStaticMeshComponent* StaticMesh;
+	
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Effects")
+	UParticleSystem* PickupParticle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item|Effects")
+	USoundBase* PickupSound;
 
 	
 	// 인터페이스 함수 구현
