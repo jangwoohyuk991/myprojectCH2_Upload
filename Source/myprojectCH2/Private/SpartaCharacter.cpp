@@ -8,6 +8,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Components/WidgetComponent.h"
 #include "Components/TextBlock.h"
+#include "Components/ProgressBar.h" // ProgressBar 연동을 위해 추가
 #include "Blueprint/UserWidget.h"
 
 ASpartaCharacter::ASpartaCharacter()
@@ -28,6 +29,8 @@ ASpartaCharacter::ASpartaCharacter()
 	OverheadWidget = CreateDefaultSubobject<UWidgetComponent>(TEXT("OverheadWidget"));
 	OverheadWidget->SetupAttachment(GetMesh());
 	OverheadWidget->SetWidgetSpace(EWidgetSpace::Screen); // 화면을 정면으로 바라보도록 설정
+	OverheadWidget->SetRelativeLocation(FVector(0.0f, 0.0f, 190.0f)); // 머리 위 높이 수정 (190.0f)
+	OverheadWidget->SetDrawSize(FVector2D(150.0f, 20.0f));             // 3D 위젯 가로/세로 크기 설정
 
 	// 스프린트 및 이동 속도 초기화
 	NormalSpeed = 600.0f;
@@ -81,11 +84,19 @@ void ASpartaCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInputCom
 	}
 }
 
+// === 기존 Move() 내부 입력 벡터에 조작 반전 처리 추가 ===
 void ASpartaCharacter::Move(const FInputActionValue& Value)
 {
 	if (!Controller) return;
 
-	const FVector2D MoveInput = Value.Get<FVector2D>();
+	FVector2D MoveInput = Value.Get<FVector2D>();
+
+	// 조작 반전 디버프 상태라면 입력 값의 축을 반대로(-1) 곱함
+	if (bIsReverseControl)
+	{
+		MoveInput *= -1.0f;
+	}
+
 	if (!FMath::IsNearlyZero(MoveInput.X)) AddMovementInput(GetActorForwardVector(), MoveInput.X);
 	if (!FMath::IsNearlyZero(MoveInput.Y)) AddMovementInput(GetActorRightVector(), MoveInput.Y);
 }
@@ -107,19 +118,31 @@ void ASpartaCharacter::Look(const FInputActionValue& Value)
 	AddControllerPitchInput(LookInput.Y);
 }
 
+// === 감속 디버프 중 스프린트 속도 조절 ===
 void ASpartaCharacter::StartSprint(const FInputActionValue& Value)
 {
 	if (GetCharacterMovement())
 	{
-		GetCharacterMovement()->MaxWalkSpeed = SprintSpeed;
+		float TargetSpeed = SprintSpeed;
+		if (bIsSlowed)
+		{
+			TargetSpeed *= CurrentSlowRatio;
+		}
+		GetCharacterMovement()->MaxWalkSpeed = TargetSpeed;
 	}
 }
 
+// === 감속 디버프 중 스프린트 종료 속도 ===
 void ASpartaCharacter::StopSprint(const FInputActionValue& Value)
 {
 	if (GetCharacterMovement())
 	{
-		GetCharacterMovement()->MaxWalkSpeed = NormalSpeed;
+		float TargetSpeed = NormalSpeed;
+		if (bIsSlowed)
+		{
+			TargetSpeed *= CurrentSlowRatio;
+		}
+		GetCharacterMovement()->MaxWalkSpeed = TargetSpeed;
 	}
 }
 
@@ -135,6 +158,57 @@ void ASpartaCharacter::AddHealth(float Amount)
 
 	// 회복 시 머리 위 체력 UI 갱신
 	UpdateOverheadHP();
+}
+
+// === 디버프 적용 및 해제 함수 (스프린트 연동 추가) ===
+void ASpartaCharacter::ApplySlow(float SlowRatio, float Duration)
+{
+	bIsSlowed = true;
+	CurrentSlowRatio = SlowRatio;
+
+	if (GetCharacterMovement())
+	{
+		// 현재 속도(걷기/달리기 상태)에 감속 비율을 곱함
+		GetCharacterMovement()->MaxWalkSpeed *= CurrentSlowRatio;
+	}
+
+	// 기존 타이머가 작동 중이면 재설정(지속시간 갱신)
+	GetWorldTimerManager().SetTimer(
+		SlowTimerHandle,
+		this,
+		&ASpartaCharacter::ResetSlow,
+		Duration,
+		false
+	);
+}
+
+void ASpartaCharacter::ResetSlow()
+{
+	bIsSlowed = false;
+	CurrentSlowRatio = 1.0f;
+
+	if (GetCharacterMovement())
+	{
+		GetCharacterMovement()->MaxWalkSpeed = NormalSpeed;
+	}
+}
+
+void ASpartaCharacter::ApplyReverseControl(float Duration)
+{
+	bIsReverseControl = true;
+
+	GetWorldTimerManager().SetTimer(
+		ReverseTimerHandle,
+		this,
+		&ASpartaCharacter::ResetReverseControl,
+		Duration,
+		false
+	);
+}
+
+void ASpartaCharacter::ResetReverseControl()
+{
+	bIsReverseControl = false;
 }
 
 float ASpartaCharacter::TakeDamage(
@@ -172,7 +246,7 @@ void ASpartaCharacter::OnDeath()
 	}
 }
 
-// 머리 위 체력 UI 텍스트 갱신 구현
+// 머리 위 체력 텍스트 갱신 구현
 void ASpartaCharacter::UpdateOverheadHP()
 {
 	if (!OverheadWidget) return;
@@ -180,8 +254,16 @@ void ASpartaCharacter::UpdateOverheadHP()
 	UUserWidget* OverheadWidgetInstance = OverheadWidget->GetUserWidgetObject();
 	if (!OverheadWidgetInstance) return;
 
+	// 기존 OverHeadHP 텍스트 갱신
 	if (UTextBlock* HPText = Cast<UTextBlock>(OverheadWidgetInstance->GetWidgetFromName(TEXT("OverHeadHP"))))
 	{
 		HPText->SetText(FText::FromString(FString::Printf(TEXT("%.0f/%.0f"), Health, MaxHealth)));
+	}
+
+	// 3D 위젯의 HPBar(ProgressBar) 비율 갱신 (명시적 float 연산 적용)
+	if (UProgressBar* HPBar = Cast<UProgressBar>(OverheadWidgetInstance->GetWidgetFromName(TEXT("HPBar"))))
+	{
+		float HealthRatio = (MaxHealth > 0.0f) ? (Health / MaxHealth) : 0.0f;
+		HPBar->SetPercent(HealthRatio);
 	}
 }

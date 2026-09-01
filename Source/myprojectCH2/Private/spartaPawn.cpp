@@ -1,6 +1,5 @@
-#include "spartaPawn.h"
-
 // 컴포넌트 및 필수 헤더 포함
+#include "spartaPawn.h"
 #include "Components/CapsuleComponent.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "GameFramework/SpringArmComponent.h"

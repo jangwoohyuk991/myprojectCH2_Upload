@@ -25,6 +25,21 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Health")
 	void AddHealth(float Amount);
 
+	// === [추가] 디버프 상태 변수 및 타이머 핸들 ===
+	bool bIsReverseControl = false;
+	FTimerHandle SlowTimerHandle;
+	FTimerHandle ReverseTimerHandle;
+
+	// === [추가] 스프린트 중 감속 연동을 위한 상태 변수 ===
+	bool bIsSlowed = false;
+	float CurrentSlowRatio = 1.0f;
+
+	// === [추가] 디버프 적용/해제 함수 ===
+	void ApplySlow(float SlowRatio, float Duration);
+	void ResetSlow();
+	void ApplyReverseControl(float Duration);
+	void ResetReverseControl();
+
 protected:
 	virtual void BeginPlay() override; // 시작 시 HP UI 갱신용
 
@@ -38,7 +53,6 @@ protected:
 	// 3D 머리 위 위젯 컴포넌트
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "UI")
 	UWidgetComponent* OverheadWidget;
-
 
 	// 스프린트 및 이동 속도 속성
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
